@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Warteg-Run | Enterprise ML Pipeline</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <style>
+        :root {
+            --primary: #00f2fe;
+            --secondary: #4facfe;
+            --bg-gradient: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --text-main: #ffffff;
+            --text-muted: #a0aec0;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Poppins', sans-serif; background: var(--bg-gradient); color: var(--text-main); height: 100vh; display: flex; overflow: hidden; }
+
+        .sidebar { width: 280px; background: var(--glass-bg); backdrop-filter: blur(20px); border-right: 1px solid var(--glass-border); display: flex; flex-direction: column; padding: 30px 0; z-index: 10; }
+        .brand { font-size: 24px; font-weight: 700; text-align: center; letter-spacing: 2px; margin-bottom: 40px; background: -webkit-linear-gradient(45deg, var(--primary), var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .nav-menu { display: flex; flex-direction: column; gap: 10px; padding: 0 20px; }
+        .nav-item { padding: 15px 20px; border-radius: 12px; cursor: pointer; font-weight: 500; color: var(--text-muted); transition: all 0.3s ease; display: flex; align-items: center; gap: 15px; border: 1px solid transparent; }
+        .nav-item i { font-size: 18px; width: 20px; text-align: center; }
+        .nav-item:hover { background: rgba(255, 255, 255, 0.05); color: var(--text-main); transform: translateX(5px); }
+        .nav-item.active { background: rgba(0, 242, 254, 0.1); color: var(--primary); border: 1px solid rgba(0, 242, 254, 0.2); box-shadow: 0 0 15px rgba(0, 242, 254, 0.05); }
+
+        .main-content { flex: 1; padding: 40px 50px; overflow-y: auto; position: relative; }
+        .page-section { display: none; animation: fadeInScale 0.5s ease forwards; opacity: 0; }
+        .page-section.active { display: block; }
+        @keyframes fadeInScale { 0% { opacity: 0; transform: translateY(20px) scale(0.98); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
+
+        .glass-card { background: rgba(0, 0, 0, 0.25); backdrop-filter: blur(10px); border: 1px solid var(--glass-border); border-radius: 20px; padding: 40px; margin-bottom: 30px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
+        .section-header { font-size: 28px; font-weight: 600; margin-bottom: 15px; color: var(--text-main); }
+        .section-desc { color: var(--text-muted); line-height: 1.6; margin-bottom: 30px; font-weight: 300; }
+
+        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-top: 20px; }
+        .metric-box { background: rgba(255, 255, 255, 0.02); border: 1px solid var(--glass-border); border-radius: 15px; padding: 25px; text-align: center; transition: transform 0.3s ease; }
+        .metric-box:hover { transform: translateY(-5px); border-color: rgba(0, 242, 254, 0.3); }
+        .metric-value { font-size: 36px; font-weight: 700; background: -webkit-linear-gradient(45deg, var(--primary), var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 5px; }
+        .metric-label { color: var(--text-muted); font-size: 14px; text-transform: uppercase; letter-spacing: 1px; }
+
+        .btn-glow { background: linear-gradient(45deg, var(--primary), var(--secondary)); color: #000; border: none; padding: 15px 30px; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 10px 20px rgba(0, 242, 254, 0.2); }
+        .btn-glow:hover { transform: translateY(-2px); box-shadow: 0 15px 25px rgba(0, 242, 254, 0.4); }
+
+        .glass-input { width: 100%; background: rgba(0, 0, 0, 0.3); border: 1px solid var(--glass-border); color: white; padding: 12px 15px; border-radius: 8px; font-size: 14px; font-family: 'Poppins', sans-serif; outline: none; margin-bottom: 15px;}
+        .glass-input option { background: #203a43; color: white; }
+
+        /* Khusus UI Home / Info Box */
+        .info-box { background: rgba(0, 242, 254, 0.05); border-left: 4px solid var(--primary); padding: 20px; border-radius: 0 10px 10px 0; margin-bottom: 20px; }
+        .info-box h3 { color: var(--primary); margin-bottom: 10px; font-size: 18px;}
+    </style>
+</head>
+<body>
+
+    <nav class="sidebar">
+        <div class="brand">WARTEG-RUN</div>
+        <div class="nav-menu">
+            <div class="nav-item active" onclick="switchPage('home', this)"><i class="fas fa-satellite-dish"></i> Pipeline Overview</div>
+            <div class="nav-item" onclick="switchPage('eda', this)"><i class="fas fa-chart-network"></i> Interactive EDA</div>
+            <div class="nav-item" onclick="switchPage('model', this)"><i class="fas fa-microchip"></i> Algorithm & Eval</div>
+            <div class="nav-item" onclick="switchPage('testing', this)"><i class="fas fa-terminal"></i> Live Prediction</div>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        
+        <section id="home" class="page-section active">
+            <div class="glass-card">
+                <h1 class="section-header">Warteg-Run: Physics-Informed ML</h1>
+                <p class="section-desc" style="font-size: 1.1rem;">Platform Prediksi Durasi Pembakaran Kalori Berbasis Kecerdasan Buatan Terintegrasi.</p>
+                
+                <div class="info-box">
+                    <h3><i class="fas fa-exclamation-triangle"></i> Latar Belakang (The Problem)</h3>
+                    <p style="color: var(--text-muted); font-size: 14px; line-height: 1.6;">Masyarakat urban seringkali mengonsumsi makanan padat kalori tanpa memiliki kalkulasi presisi mengenai seberapa banyak aktivitas fisik yang dibutuhkan untuk membakarnya kembali. Kalkulator kalori konvensional hanya memberikan angka statis tanpa mempertimbangkan dinamika tingkat kebugaran (BMI), Usia, dan Pace lari seseorang secara spesifik.</p>
+                </div>
+
+                <div class="info-box">
+                    <h3><i class="fas fa-bullseye"></i> Target Pengguna & Kasus Penggunaan</h3>
+                    <ul style="color: var(--text-muted); font-size: 14px; line-height: 1.6; margin-left: 20px;">
+                        <li><b>Penggiat Kebugaran:</b> Membantu memvisualisasikan "konsekuensi kardio" dari asupan kalori mereka.</li>
+                        <li><b>Pelari Pemula hingga Profesional:</b> Memberikan rekomendasi pace dan durasi lari yang aman dan realistis sesuai profil fisik pengguna.</li>
+                        <li><b>Integrasi Medis:</b> Sistem ini mengkategorikan batas aman kecepatan kardio berdasarkan usia dan metrik obesitas.</li>
+                    </ul>
+                </div>
+
+                <div class="info-box">
+                    <h3><i class="fas fa-cogs"></i> Arsitektur Teknis</h3>
+                    <p style="color: var(--text-muted); font-size: 14px; line-height: 1.6;">Pipeline ini terintegrasi dengan database 1340+ menu makanan. Kami merancang <b>Regression Engine</b> menggunakan Random Forest yang memodelkan relasi non-linear dari rumus fisika <i>Metabolic Equivalent of Task (MET)</i>. Sisi backend dilayani oleh FastAPI secara stateless, sementara sisi klien (Frontend) dirender menggunakan arsitektur Single Page Application (SPA) dengan Glassmorphism UI.</p>
+                </div>
+
+                <div class="info-box" style="border-left-color: #ff4757; background: rgba(255, 71, 87, 0.05);">
+                    <h3 style="color: #ff4757;"><i class="fas fa-graduation-cap"></i> Memahami Evaluasi AI (Bagi Orang Awam)</h3>
+                    <p style="color: var(--text-muted); font-size: 14px; line-height: 1.6; margin-bottom: 10px;">Dalam Machine Learning, kita harus mengukur seberapa "pintar" model kita. Karena sistem ini menebak angka (durasi waktu lari), metrik utama yang digunakan adalah <b>MAE (Mean Absolute Error)</b>.</p>
+                    
+                    <div style="background: rgba(0, 0, 0, 0.4); padding: 15px; border-radius: 8px; font-family: monospace; text-align: center; margin: 15px 0; color: #00f2fe; font-size: 16px; border: 1px dashed rgba(255,255,255,0.2);">
+                        MAE = (1/n) &Sigma; | Prediksi AI - Kenyataan |
+                    </div>
+                    
+                    <p style="color: var(--text-muted); font-size: 14px; line-height: 1.6;"><b>Analogi Sederhana:</b> Bayangkan Anda menebak waktu perjalanan ke kantor adalah 30 menit, tapi aslinya butuh 35 menit. Anda meleset 5 menit. Besoknya, Anda menebak 40 menit, ternyata butuh 38 menit. Anda meleset 2 menit. Rata-rata tebakan Anda meleset sebanyak 3.5 menit.<br><br>Angka MAE menunjukkan <b>rata-rata selisih (melesetnya) tebakan AI dari waktu yang sebenarnya</b>. Semakin kecil angka MAE, semakin akurat AI tersebut dalam memberikan rekomendasi waktu lari. Jika MAE = 2.0, artinya tebakan aplikasi ini rata-rata hanya meleset 2 menit dari realita!</p>
+                </div>
+            </div>
+        </section>
+        <section id="eda" class="page-section">
+            <div class="glass-card">
+                <h2 class="section-header">Exploratory Data Analysis (EDA)</h2>
+                <p class="section-desc">Visualisasi dinamis dari dataset sintetis yang di-<i>generate</i> langsung oleh backend FastAPI. Analisis korelasi antar variabel sebelum masuk ke tahap modeling.</p>
+                
+                <div style="display: flex; gap: 20px; background: rgba(0,0,0,0.2); padding: 20px; border-radius: 12px; border: 1px solid var(--glass-border); margin-bottom: 20px;">
+                    <div style="flex: 1;">
+                        <label style="color: var(--primary); font-size: 12px; margin-bottom: 5px; display: block;">Feature X (Horizontal)</label>
+                        <select id="eda-x" class="glass-input" style="margin-bottom: 0;">
+                            <option value="Calories Burned">Calories Burned</option>
+                            <option value="Weight(kg)">Weight (kg)</option>
+                            <option value="Running Speed(km/h)">Running Speed (km/h)</option>
+                            <option value="Age">Age</option>
+                            <option value="Time_Minutes">Time (Target Variable)</option>
+                        </select>
+                    </div>
+                    <div style="flex: 1;">
+                        <label style="color: var(--primary); font-size: 12px; margin-bottom: 5px; display: block;">Feature Y (Vertikal)</label>
+                        <select id="eda-y" class="glass-input" style="margin-bottom: 0;">
+                            <option value="Time_Minutes">Time (Target Variable)</option>
+                            <option value="Calories Burned">Calories Burned</option>
+                            <option value="Running Speed(km/h)">Running Speed (km/h)</option>
+                        </select>
+                    </div>
+                    <div style="flex: 1;">
+                        <label style="color: var(--primary); font-size: 12px; margin-bottom: 5px; display: block;">Tipe Grafik</label>
+                        <select id="eda-type" class="glass-input" style="margin-bottom: 0;">
+                            <option value="scatter">Scatter Plot</option>
+                            <option value="histogram">Histogram (Distribusi X)</option>
+                        </select>
+                    </div>
+                    <div style="flex: 1; display: flex; align-items: flex-end;">
+                        <button class="btn-glow" style="width: 100%; padding: 12px;" onclick="renderEDA()"><i class="fas fa-paint-brush"></i> Plot Grafik!</button>
+                    </div>
+                </div>
+
+                <div id="eda-plot-container" style="height: 400px; background: rgba(0,0,0,0.3); border-radius: 12px; display: flex; align-items: center; justify-content: center; border: 1px dashed rgba(255,255,255,0.1);">
+                    <p style="color: var(--text-muted);"><i class="fas fa-chart-bar"></i> Klik tombol Plot Grafik untuk merender visualisasi.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="model" class="page-section">
+            <div class="glass-card">
+                <h2 class="section-header">Live Algorithm Training & Evaluation</h2>
+                <p class="section-desc">Pilih fitur, atur test size, dan saksikan metrik evaluasi regresi dihitung secara *real-time*.</p>
+                
+                <div style="display: flex; gap: 30px; margin-bottom: 20px; flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 250px;">
+                        <label style="color: var(--text-muted); font-size: 14px;">Algoritma Model</label>
+                        <select id="ml-model" class="glass-input">
+                            <option value="Random Forest">Random Forest Regressor</option>
+                            <option value="Linear Regression">Linear Regression</option>
+                        </select>
+                        
+                        <label style="color: var(--text-muted); font-size: 14px;">Test Size (<span id="test-size-val">0.2</span>)</label>
+                        <input type="range" id="test-size" min="0.1" max="0.5" step="0.1" value="0.2" style="width: 100%; margin-bottom: 20px;" oninput="document.getElementById('test-size-val').innerText = this.value">
+
+                        <button class="btn-glow" id="btn-train" style="width: 100%;" onclick="trainModelLive()">
+                            <i class="fas fa-cogs"></i> Execute Training Pipeline
+                        </button>
+                    </div>
+
+                    <div style="flex: 1; min-width: 250px; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 10px; border: 1px solid var(--glass-border);">
+                        <label style="color: var(--primary); font-weight: bold; margin-bottom: 10px; display: block; font-size: 14px;">Select Features</label>
+                        <label style="display: block; margin-bottom: 8px; font-size: 13px;"><input type="checkbox" class="feature-cb" value="Calories Burned" checked disabled> Calories Burned</label>
+                        <label style="display: block; margin-bottom: 8px; font-size: 13px;"><input type="checkbox" class="feature-cb" value="Weight(kg)" checked> Weight (kg)</label>
+                        <label style="display: block; margin-bottom: 8px; font-size: 13px;"><input type="checkbox" class="feature-cb" value="Running Speed(km/h)" checked> Running Speed</label>
+                        <label style="display: block; margin-bottom: 8px; font-size: 13px;"><input type="checkbox" class="feature-cb" value="Age"> Age</label>
+                        <label style="display: block; margin-bottom: 8px; font-size: 13px;"><input type="checkbox" class="feature-cb" value="Height(cm)"> Height (cm)</label>
+                    </div>
+                </div>
+
+                <div id="training-result-area" style="display: none; animation: fadeInScale 0.5s ease;">
+                    <div class="metrics-grid" style="margin-top: 10px; margin-bottom: 20px;">
+                        <div class="metric-box"><div class="metric-value" id="res-r2">0</div><div class="metric-label">R-Squared (R2)</div></div>
+                        <div class="metric-box"><div class="metric-value" id="res-rmse">0</div><div class="metric-label">RMSE (Menit)</div></div>
+                        <div class="metric-box"><div class="metric-value" id="res-mae">0</div><div class="metric-label">MAE (Menit)</div></div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                        <div id="plot-scatter" style="height: 300px; background: rgba(255,255,255,0.05); border-radius: 10px;"></div>
+                        <div id="plot-importance" style="height: 300px; background: rgba(255,255,255,0.05); border-radius: 10px;"></div>
+                        <div id="plot-residual" style="height: 300px; grid-column: span 2; background: rgba(255,255,255,0.05); border-radius: 10px;"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="testing" class="page-section">
+            <div class="glass-card">
+                <h2 class="section-header">Live Prediction Engine</h2>
+                <p class="section-desc">Uji coba inferensi model menggunakan data nyata. Pilih menu makananmu!</p>
+                
+                <div style="display: flex; gap: 20px; margin-bottom: 20px;">
+                    <div style="flex: 1;"><label style="color: var(--text-muted); font-size: 12px;">Berat (kg)</label><input type="number" id="weight" value="65" class="glass-input"></div>
+                    <div style="flex: 1;"><label style="color: var(--text-muted); font-size: 12px;">Tinggi (cm)</label><input type="number" id="height" value="170" class="glass-input"></div>
+                    <div style="flex: 1;"><label style="color: var(--text-muted); font-size: 12px;">Usia</label><input type="number" id="age" value="22" class="glass-input"></div>
+                </div>
+
+                <div style="position: relative; margin-bottom: 15px;">
+                    <label style="color: var(--text-muted); font-size: 12px;">Cari Makanan</label>
+                    <input type="text" id="foodInput" class="glass-input" placeholder="Ketik nama makanan..." autocomplete="off">
+                    <div id="suggestions" style="position: absolute; top: 100%; left: 0; right: 0; background: #1a2a32; border: 1px solid var(--primary); z-index: 100; max-height: 150px; overflow-y: auto; display: none;"></div>
+                </div>
+
+                <div id="selectedFoods" style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px;"></div>
+
+                <button class="btn-glow" style="width: 100%;" onclick="hitungLari()"><i class="fas fa-bolt"></i> Prediksi Waktu Lari</button>
+
+                <div id="result-container" style="display: none; margin-top: 30px; padding-top: 20px; border-top: 1px dashed rgba(255,255,255,0.2);">
+                    <h3 style="color: var(--primary);">Hasil Prediksi:</h3>
+                    <p style="color: var(--text-muted); font-size: 14px;" id="res-info"></p>
+                    <div id="rekomendasi-list" style="margin-top: 15px; display: flex; flex-direction: column; gap: 10px;"></div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const API_URL = "http://127.0.0.1:8000";
+
+        // Navigasi
+        function switchPage(pageId, element) {
+            document.querySelectorAll('.page-section').forEach(sec => sec.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            element.classList.add('active');
+        }
+
+        // ==========================================
+        // LOGIKA EDA SINTETIS (PERBAIKAN PLOTLY)
+        // ==========================================
+        let edaDataCache = null;
+
+        async function renderEDA() {
+            const btnContainer = document.getElementById('eda-plot-container');
+            
+            if (!edaDataCache) {
+                btnContainer.innerHTML = '<i class="fas fa-spinner fa-spin" style="font-size: 24px; color: var(--primary);"></i>';
+                try {
+                    const response = await fetch(`${API_URL}/eda_data`);
+                    edaDataCache = await response.json();
+                } catch (err) {
+                    btnContainer.innerHTML = '<span style="color:red">Gagal koneksi ke API</span>';
+                    return;
+                }
+            }
+
+            const xVar = document.getElementById('eda-x').value;
+            const yVar = document.getElementById('eda-y').value;
+            const plotType = document.getElementById('eda-type').value;
+
+            // FIX BUGS: Matikan Flex layout agar Plotly bisa menghitung dimensi kanvas dengan benar
+            btnContainer.style.display = 'block'; 
+            btnContainer.innerHTML = ''; 
+
+            const layout = {
+                paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
+                font: { color: '#ffffff', family: 'Poppins' },
+                margin: { t: 40, l: 60, r: 40, b: 60 },
+                xaxis: { title: xVar, gridcolor: 'rgba(255,255,255,0.1)' },
+                yaxis: { title: plotType === 'scatter' ? yVar : 'Frekuensi', gridcolor: 'rgba(255,255,255,0.1)' }
+            };
+
+            let trace;
+            if (plotType === 'scatter') {
+                trace = { x: edaDataCache[xVar], y: edaDataCache[yVar], mode: 'markers', type: 'scatter', marker: { color: '#00f2fe', size: 6, opacity: 0.7 } };
+                layout.title = `Scatter Plot: ${xVar} vs ${yVar}`;
+            } else {
+                trace = { x: edaDataCache[xVar], type: 'histogram', marker: { color: '#4facfe', line: {color: '#2c5364', width: 1} } };
+                layout.title = `Distribusi (Histogram): ${xVar}`;
+            }
+
+            Plotly.newPlot('eda-plot-container', [trace], layout, {responsive: true});
+        }
+
+        // ==========================================
+        // LOGIKA AUTO-ML TRAINING
+        // ==========================================
+        async function trainModelLive() {
+            const features = Array.from(document.querySelectorAll('.feature-cb:checked')).map(cb => cb.value);
+            const payload = { model_type: document.getElementById('ml-model').value, test_size: parseFloat(document.getElementById('test-size').value), features: features };
+
+            const btn = document.getElementById('btn-train');
+            const ogText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+
+            try {
+                const response = await fetch(`${API_URL}/train`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                const result = await response.json();
+                
+                document.getElementById('training-result-area').style.display = 'block';
+                document.getElementById('res-r2').innerText = result.metrics.r2;
+                document.getElementById('res-rmse').innerText = result.metrics.rmse;
+                document.getElementById('res-mae').innerText = result.metrics.mae;
+
+                const baseLayout = { paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)', font: { color: '#fff', size: 10 }, margin: { t: 30, l: 40, r: 20, b: 40 } };
+
+                const maxV = Math.max(...result.scatter.y_true, ...result.scatter.y_pred);
+                Plotly.newPlot('plot-scatter', [
+                    { x: result.scatter.y_true, y: result.scatter.y_pred, mode: 'markers', type: 'scatter', marker: { color: '#00f2fe' }, name: 'Pred' },
+                    { x: [0, maxV], y: [0, maxV], mode: 'lines', line: { color: '#ff4757', dash: 'dash' }, name: 'Ideal' }
+                ], { ...baseLayout, title: 'Actual vs Predicted' }, {responsive: true});
+
+                Plotly.newPlot('plot-importance', [
+                    { x: result.importances, y: result.features, type: 'bar', orientation: 'h', marker: { color: '#4facfe' } }
+                ], { ...baseLayout, title: 'Feature Weights', margin: {l: 120, t:30, b:40, r:20} }, {responsive: true});
+
+                Plotly.newPlot('plot-residual', [
+                    { x: result.residuals, type: 'histogram', marker: { color: '#ff6b81' } }
+                ], { ...baseLayout, title: 'Error (Residual) Distribution', xaxis:{title:'Error Margin (Menit)'} }, {responsive: true});
+
+            } catch (error) { alert("Gagal koneksi ke FastAPI."); } 
+            finally { btn.innerHTML = ogText; }
+        }
+
+        // ==========================================
+        // LOGIKA PREDICTION (MENU DENGAN KALORI)
+        // ==========================================
+        let menuTersedia = [];
+        let menuDipilihObj = []; 
+
+        fetch(`${API_URL}/menu`).then(r => r.json()).then(d => menuTersedia = d.menu_tersedia).catch(e=>console.log(e));
+
+        const foodInput = document.getElementById('foodInput');
+        const suggBox = document.getElementById('suggestions');
+        
+        foodInput.addEventListener('input', function() {
+            const q = this.value.toLowerCase();
+            suggBox.innerHTML = '';
+            if(!q) { suggBox.style.display = 'none'; return; }
+            
+            const matches = menuTersedia.filter(m => m.name.toLowerCase().includes(q)).slice(0, 10);
+            
+            if(matches.length) {
+                suggBox.style.display = 'block';
+                matches.forEach(m => {
+                    let d = document.createElement('div');
+                    d.style.padding = '12px 15px'; d.style.cursor = 'pointer'; d.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
+                    
+                    // TAG HTML DI SINI AMAN KARENA ADA DI DALAM STRING
+                    d.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span style="color:var(--text-muted)"><i class="fas fa-utensils" style="margin-right:10px;"></i> ${m.name}</span>
+                        <span style="color:var(--primary); font-weight:bold; font-size:12px;">${m.calories} Kcal</span>
+                    </div>`;
+                    
+                    d.onclick = () => { 
+                        if(!menuDipilihObj.find(x => x.name === m.name)) menuDipilihObj.push(m); 
+                        renderChips(); 
+                        foodInput.value=''; 
+                        suggBox.style.display='none';
+                    };
+                    suggBox.appendChild(d);
+                });
+            } else suggBox.style.display = 'none';
+        });
+
+        function renderChips() {
+            const c = document.getElementById('selectedFoods'); c.innerHTML = '';
+            menuDipilihObj.forEach(m => {
+                c.innerHTML += `<div style="background: rgba(0,242,254,0.1); border: 1px solid rgba(0,242,254,0.3); padding: 8px 15px; border-radius: 20px; font-size: 13px; color: white;">
+                    ${m.name} <span style="color:var(--primary); font-weight:bold; margin-left:5px;">(${m.calories} Kcal)</span> 
+                    <span style="cursor:pointer; color:#ff4757; margin-left:10px;" onclick="menuDipilihObj=menuDipilihObj.filter(x=>x.name!=='${m.name}'); renderChips();">✖</span>
+                </div>`;
+            });
+        }
+
+        async function hitungLari() {
+            if(!menuDipilihObj.length) return alert("Pilih asupan makanan terlebih dahulu!");
+            
+            const listNamaMakanan = menuDipilihObj.map(m => m.name);
+            
+            const payload = { 
+                makanan_dikonsumsi: listNamaMakanan, 
+                weight: +document.getElementById('weight').value, 
+                height: +document.getElementById('height').value, 
+                age: +document.getElementById('age').value 
+            };
+            
+            try {
+                const r = await fetch(`${API_URL}/predict`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+                const res = await r.json();
+                if(res.status === "error") return alert(res.pesan);
+                
+                document.getElementById('result-container').style.display = 'block';
+                document.getElementById('res-info').innerHTML = `Total Beban: <b style="color:var(--primary); font-size:18px;">${res.ringkasan_makanan.total_kalori} Kcal</b> &nbsp;|&nbsp; Fisik: <b>${res.analisis_kesehatan.kategori_fisik}</b>`;
+                
+                const list = document.getElementById('rekomendasi-list'); list.innerHTML = '';
+                res.rekomendasi.forEach(x => {
+                    list.innerHTML += `<div style="background:rgba(255,255,255,0.05); padding:15px 20px; border-left: 3px solid var(--primary); border-radius: 5px; display:flex; justify-content:space-between; align-items:center;">
+                        <span style="color:var(--text-muted)"><i class="fas fa-running" style="color:var(--primary); margin-right:10px;"></i> ${x.opsi_pace}</span>
+                        <span style="font-size:22px; font-weight:bold; color:white;">${x.rekomendasi_waktu_menit} <small style="font-size:12px; color:var(--text-muted); font-weight:normal;">Menit</small></span>
+                    </div>`;
+                });
+            } catch(e) { alert("Error Server Koneksi API."); }
+        }
+    </script>
+</body>
+</html>
