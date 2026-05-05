@@ -23,6 +23,9 @@ CSV_PATH = os.path.join(BASE_DIR, "data", "nutrition.csv")
 
 app = FastAPI(title="Warteg-Run AI API")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+@app.get("/")
+def read_root():
+    return {"status": "Warteg-Run API is LIVE!", "pesan": "Backend berhasil jalan di Railway"}
 
 try:
     model, scaler = joblib.load(MODEL_PATH), joblib.load(SCALER_PATH)
